@@ -62,6 +62,13 @@ class Space extends Model
         return $this->hasMany(Booking::class);
     }
 
+    public function getImageUrlAttribute(): string
+    {
+        $image = $this->image;
+
+        return str_starts_with($image, 'http') ? $image : asset('storage/'.$image);
+    }
+
     public function getCategoryLabelAttribute(): string
     {
         return self::CATEGORIES[$this->category]['label'] ?? $this->category;

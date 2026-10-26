@@ -1,6 +1,6 @@
 <a href="{{ route('spaces.show', $space) }}" class="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
     <div class="relative h-48 overflow-hidden bg-slate-200">
-        <img src="{{ $space->image }}" alt="{{ $space->name }}" loading="lazy"
+        <img src="{{ $space->image_url }}" alt="{{ $space->name }}" loading="lazy"
              class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
              onerror="this.style.display='none'">
         <span class="absolute left-3 top-3 rounded-md bg-slate-900/85 px-2.5 py-1 text-[11px] font-bold text-white">{{ $space->category_label }}</span>

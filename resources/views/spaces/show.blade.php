@@ -21,7 +21,7 @@
         <div class="grid gap-8 lg:grid-cols-[1.6fr_1fr]">
             <div>
                 <div class="relative h-72 overflow-hidden rounded-2xl bg-slate-200 md:h-96">
-                    <img src="{{ $space->image }}" alt="{{ $space->name }}" class="h-full w-full object-cover" onerror="this.style.display='none'">
+                    <img src="{{ $space->image_url }}" alt="{{ $space->name }}" class="h-full w-full object-cover" onerror="this.style.display='none'">
                     <span class="absolute left-4 top-4 rounded-md bg-slate-900/85 px-3 py-1 text-xs font-bold text-white">{{ $space->category_label }}</span>
                 </div>
 

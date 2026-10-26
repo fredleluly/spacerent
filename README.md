@@ -10,6 +10,17 @@ Website penyewaan ruang kerja & event space (meeting room, private office, cowor
 - Halaman konfirmasi dengan tombol konfirmasi via WhatsApp
 - Syarat & Ketentuan, FAQ, dan form Hubungi Kami
 
+## Panel Admin
+
+Buka `/admin`. Login bawaan (dibuat oleh seeder):
+
+- Email: `admin@spacerent.id`
+- Password: `admin12345`
+
+Ganti lewat `ADMIN_EMAIL` dan `ADMIN_PASSWORD` di `.env` sebelum `php artisan db:seed --class=AdminSeeder`.
+
+Menu admin: Dashboard (statistik), CRUD Ruangan (upload gambar atau URL), Booking (cari, filter, ubah status, hapus), dan Pesan Masuk.
+
 ## Menjalankan
 
 ```sh
@@ -18,6 +29,7 @@ cp .env.example .env
 php artisan key:generate
 touch database/database.sqlite
 php artisan migrate --seed
+php artisan storage:link
 php artisan serve
 ```
 
