@@ -1,0 +1,62 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Booking;
+use App\Services\MidtransService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
+
+class PaymentController extends Controller
+{
+    public function pay(Booking $booking, MidtransService $midtrans): JsonResponse
+    {
+        if ($booking->payment_status === 'paid') {
+            return response()->json(['message' => 'Booking sudah dibayar.'], 409);
+        }
+
+        $expired = $booking->expires_at && Carbon::parse($booking->expires_at)->isPast();
+        if ($booking->status !== 'pending' || $booking->payment_status !== 'unpaid' || $expired) {
+            return response()->json(['message' => 'Booking tidak dapat dibayar (kedaluwarsa atau dibatalkan).'], 422);
+        }
+
+        try {
+            $token = $midtrans->createSnapToken($booking);
+        } catch (\Throwable $e) {
+            Log::error('Midtrans snap token failed: '.$e->getMessage());
+
+            return response()->json(['message' => 'Gagal menghubungi payment gateway. Coba lagi.'], 502);
+        }
+
+        return response()->json(['snap_token' => $token, 'client_key' => config('midtrans.client_key')]);
+    }
+
+    public function finish(Request $request, Booking $booking, MidtransService $midtrans): RedirectResponse
+    {
+        // Sinkronisasi opsional; sumber kebenaran tetap webhook.
+        if ($booking->order_id && $booking->payment_status !== 'paid') {
+            try {
+                $status = \Midtrans\Transaction::status($booking->order_id);
+                $payload = json_decode(json_encode($status), true);
+                if (is_array($payload) && (int) round((float) ($payload['gross_amount'] ?? 0)) === (int) $booking->total) {
+                    $midtrans->applyNotification($booking, $payload);
+                }
+            } catch (\Throwable $e) {
+                Log::info('Midtrans status sync skipped: '.$e->getMessage());
+            }
+        }
+
+        $booking->refresh();
+
+        $flash = match ($booking->payment_status) {
+            'paid' => ['success', 'Pembayaran berhasil. Booking Anda telah dikonfirmasi.'],
+            'failed', 'expired' => ['error', 'Pembayaran gagal atau kedaluwarsa.'],
+            default => ['info', 'Pembayaran sedang diproses. Halaman akan diperbarui setelah pembayaran terkonfirmasi.'],
+        };
+
+        return redirect()->route('booking.show', $booking)->with('payment_flash', ['type' => $flash[0], 'message' => $flash[1]]);
+    }
+}

@@ -9,6 +9,10 @@
         ['Booking Menunggu', $stats['pending'], 'clock', 'text-amber-600 bg-amber-50'],
         ['Total Booking', $stats['bookings'], 'calendar-check', 'text-emerald-600 bg-emerald-50'],
         ['Pendapatan (Dikonfirmasi)', 'Rp '.number_format($stats['revenue'], 0, ',', '.'), 'wallet', 'text-violet-600 bg-violet-50'],
+        ['Total Pendapatan (Lunas)', 'Rp '.number_format($stats['revenue_paid'], 0, ',', '.'), 'banknote', 'text-emerald-600 bg-emerald-50'],
+        ['Pendapatan Bulan Ini', 'Rp '.number_format($stats['revenue_month'], 0, ',', '.'), 'trending-up', 'text-brand-600 bg-brand-50'],
+        ['Menunggu Pembayaran', $stats['awaiting_payment'], 'hourglass', 'text-amber-600 bg-amber-50'],
+        ['Booking Hari Ini', $stats['today'], 'calendar-days', 'text-sky-600 bg-sky-50'],
     ] as [$label, $value, $icon, $color])
         <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5">
             <span class="flex h-12 w-12 items-center justify-center rounded-xl {{ $color }}"><i data-lucide="{{ $icon }}" class="h-5 w-5"></i></span>

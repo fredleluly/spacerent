@@ -12,7 +12,7 @@ class SpaceController extends Controller
 {
     public function index(Request $request)
     {
-        $spaces = Space::query()
+        $spaces = Space::query()->with('owner')
             ->when($request->query('q'), fn ($q, $v) => $q->where('name', 'like', "%{$v}%"))
             ->when($request->query('category'), fn ($q, $v) => $q->where('category', $v))
             ->latest()

@@ -18,7 +18,7 @@
 <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
     <table class="w-full text-left text-sm">
         <thead class="bg-slate-50 text-[11px] font-bold uppercase tracking-wide text-slate-500">
-            <tr><th class="px-5 py-3">Ruangan</th><th class="px-5 py-3">Kategori</th><th class="px-5 py-3">Lokasi</th><th class="px-5 py-3">Kapasitas</th><th class="px-5 py-3">Harga</th><th class="px-5 py-3">Status</th><th class="px-5 py-3 text-right">Aksi</th></tr>
+            <tr><th class="px-5 py-3">Ruangan</th><th class="px-5 py-3">Penjual</th><th class="px-5 py-3">Kategori</th><th class="px-5 py-3">Lokasi</th><th class="px-5 py-3">Kapasitas</th><th class="px-5 py-3">Harga</th><th class="px-5 py-3">Status</th><th class="px-5 py-3 text-right">Aksi</th></tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
             @forelse ($spaces as $s)
@@ -29,6 +29,7 @@
                             <span class="font-semibold">{{ $s->name }}</span>
                         </div>
                     </td>
+                    <td class="px-5 py-3 text-slate-500">{{ $s->owner?->name ?? '-' }}</td>
                     <td class="px-5 py-3 text-slate-500">{{ $s->category_label }}</td>
                     <td class="px-5 py-3 text-slate-500">{{ $s->location }}</td>
                     <td class="px-5 py-3 text-slate-500">{{ $s->capacity }}</td>
@@ -44,7 +45,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="7" class="px-5 py-12 text-center text-slate-400">Belum ada ruangan.</td></tr>
+                <tr><td colspan="8" class="px-5 py-12 text-center text-slate-400">Belum ada ruangan.</td></tr>
             @endforelse
         </tbody>
     </table>

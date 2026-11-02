@@ -9,8 +9,12 @@
         <option value="">Semua Status</option>
         @foreach ($statuses as $v => $l)<option value="{{ $v }}" @selected(request('status') === $v)>{{ $l }}</option>@endforeach
     </select>
+    <select name="payment_status" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+        <option value="">Semua Pembayaran</option>
+        @foreach ($paymentStatuses as $v => $l)<option value="{{ $v }}" @selected(request('payment_status') === $v)>{{ $l }}</option>@endforeach
+    </select>
     <button class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-bold text-white hover:bg-brand-700">Filter</button>
-    @if (request()->hasAny(['q', 'status']))<a href="{{ route('admin.bookings.index') }}" class="px-2 py-2 text-sm text-slate-500 hover:text-brand-600">Reset</a>@endif
+    @if (request()->hasAny(['q', 'status', 'payment_status']))<a href="{{ route('admin.bookings.index') }}" class="px-2 py-2 text-sm text-slate-500 hover:text-brand-600">Reset</a>@endif
 </form>
 
 <div class="rounded-xl border border-slate-200 bg-white">

@@ -39,7 +39,7 @@ class Space extends Model
     protected $fillable = [
         'name', 'slug', 'category', 'area', 'district', 'capacity', 'price',
         'price_unit', 'image', 'gallery', 'description', 'facilities',
-        'rating', 'is_available',
+        'rating', 'is_available', 'user_id',
     ];
 
     protected function casts(): array
@@ -55,6 +55,11 @@ class Space extends Model
     public function getRouteKeyName(): string
     {
         return 'slug';
+    }
+
+    public function owner(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function bookings(): HasMany

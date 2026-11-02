@@ -30,7 +30,10 @@
         ['admin.spaces.index', 'Ruangan', 'building-2', 'admin.spaces.*'],
         ['admin.bookings.index', 'Booking', 'calendar-check', 'admin.bookings.*'],
         ['admin.messages.index', 'Pesan Masuk', 'mail', 'admin.messages.*'],
+        ['admin.chats.index', 'Chat', 'message-circle', 'admin.chats.*'],
+        ['admin.users.index', 'Pengguna', 'users', 'admin.users.*'],
     ];
+    $chatUnread = (int) \App\Models\Conversation::sum('unread_admin');
     $pendingCount = \App\Models\Booking::where('status', 'pending')->count();
 @endphp
 <div class="flex min-h-screen">
@@ -46,6 +49,9 @@
                     <i data-lucide="{{ $icon }}" class="h-4 w-4"></i>{{ $label }}
                     @if ($route === 'admin.bookings.index' && $pendingCount)
                         <span class="ml-auto rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-bold text-slate-900">{{ $pendingCount }}</span>
+                    @endif
+                    @if ($route === 'admin.chats.index' && $chatUnread)
+                        <span class="ml-auto rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white">{{ $chatUnread }}</span>
                     @endif
                 </a>
             @endforeach

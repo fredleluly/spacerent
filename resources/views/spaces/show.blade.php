@@ -45,6 +45,22 @@
 
             {{-- Booking card --}}
             <aside class="lg:sticky lg:top-24 lg:self-start">
+                @guest
+                    <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg">
+                        <p class="text-xs text-slate-400">Harga mulai dari</p>
+                        <p class="text-3xl font-extrabold text-brand-600">{{ $space->formatted_price }}<span class="text-sm font-medium text-slate-400"> / {{ $space->price_unit }}</span></p>
+                        <p class="mt-4 text-sm font-semibold text-slate-700">Masuk atau daftar untuk memesan ruangan ini</p>
+                        <div class="mt-4 grid grid-cols-2 gap-3">
+                            <a href="{{ route('login', ['redirect' => url()->current()]) }}" class="rounded-lg bg-brand-600 px-4 py-3 text-center text-sm font-bold text-white hover:bg-brand-700">Masuk</a>
+                            <a href="{{ route('register') }}" class="rounded-lg border border-slate-200 px-4 py-3 text-center text-sm font-bold text-slate-700 hover:border-brand-500">Daftar</a>
+                        </div>
+                    </div>
+                @elseif (! auth()->user()->isBuyer())
+                    <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg">
+                        <p class="text-3xl font-extrabold text-brand-600">{{ $space->formatted_price }}<span class="text-sm font-medium text-slate-400"> / {{ $space->price_unit }}</span></p>
+                        <p class="mt-4 rounded-lg bg-slate-100 p-4 text-sm text-slate-600">Hanya akun pembeli yang dapat memesan ruangan. Anda masuk sebagai {{ auth()->user()->isSeller() ? 'penjual' : 'admin' }}.</p>
+                    </div>
+                @else
                 <form method="POST" action="{{ route('booking.store', $space) }}" id="booking-form" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg">
                     @csrf
                     <p class="text-xs text-slate-400">Harga mulai dari</p>
@@ -67,14 +83,14 @@
                     @if ($space->is_available)
                     <div class="mt-5 space-y-3.5">
                         <label class="{{ $label }}">Nama Lengkap
-                            <input type="text" name="name" value="{{ old('name') }}" required class="{{ $input }}">
+                            <input type="text" name="name" value="{{ old('name', auth()->user()?->name) }}" required class="{{ $input }}">
                         </label>
                         <div class="grid grid-cols-2 gap-3">
                             <label class="{{ $label }}">Email
-                                <input type="email" name="email" value="{{ old('email') }}" required class="{{ $input }}">
+                                <input type="email" name="email" value="{{ old('email', auth()->user()?->email) }}" required class="{{ $input }}">
                             </label>
                             <label class="{{ $label }}">No. WhatsApp
-                                <input type="tel" name="phone" value="{{ old('phone') }}" required placeholder="0812..." class="{{ $input }}">
+                                <input type="tel" name="phone" value="{{ old('phone', auth()->user()?->phone) }}" required placeholder="0812..." class="{{ $input }}">
                             </label>
                         </div>
                         <label class="{{ $label }}">Perusahaan (opsional)
@@ -90,6 +106,7 @@
                                 </label>
                             @endif
                         </div>
+                        <p id="taken-info" class="hidden rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800"></p>
                         <div class="grid grid-cols-2 gap-3">
                             <label class="{{ $label }}">Durasi ({{ $unitLabel }})
                                 <input type="number" name="duration" id="duration" value="{{ old('duration', 1) }}" min="1" max="{{ $maxDuration }}" required class="{{ $input }}">
@@ -116,6 +133,25 @@
                         <p class="mt-5 rounded-lg bg-slate-100 p-4 text-center text-sm text-slate-500">Ruangan ini sedang penuh.</p>
                     @endif
                 </form>
+                @endguest
+
+                {{-- Chat pemilik --}}
+                @unless (auth()->check() && ! auth()->user()->isBuyer())
+                <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+                    <p class="flex items-center gap-2 text-sm font-extrabold"><i data-lucide="message-circle" class="h-4 w-4 text-brand-600"></i> Tanya Pemilik</p>
+                    <p class="mt-1 text-xs text-slate-500">{{ config('spacerent.reply_time') }}</p>
+                    @auth
+                        <form method="POST" action="{{ route('chat.start.space', $space) }}" class="mt-3 space-y-2">
+                            @csrf
+                            <textarea name="body" maxlength="1000" rows="3" placeholder="Pertanyaan Anda (opsional)..." class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">{{ old('body') }}</textarea>
+                            @error('body')<p class="text-xs text-rose-600">{{ $message }}</p>@enderror
+                            <button class="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-700">Mulai Chat</button>
+                        </form>
+                    @else
+                        <a href="{{ route('login') }}" class="mt-3 block rounded-lg border border-brand-600 px-4 py-2.5 text-center text-sm font-bold text-brand-600 hover:bg-brand-50">Masuk untuk chat</a>
+                    @endauth
+                </div>
+                @endunless
             </aside>
         </div>
 
@@ -137,6 +173,26 @@
 <script>
     (() => {
         const price = {{ (int) $space->price }};
+        const dateEl = document.querySelector('input[name=date]');
+        const info = document.getElementById('taken-info');
+        if (dateEl && info) {
+            const isHour = @json($space->price_unit === 'jam');
+            const fmt = (iso) => { const d = new Date(iso); return isHour
+                ? d.toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit'})
+                : d.toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'}); };
+            const load = () => {
+                if (!dateEl.value) return;
+                fetch(@json(route('spaces.availability', $space)) + '?date=' + dateEl.value, {headers: {Accept: 'application/json'}})
+                    .then(r => r.ok ? r.json() : null)
+                    .then(j => {
+                        if (!j || !j.taken.length) { info.classList.add('hidden'); return; }
+                        info.textContent = 'Sudah terisi: ' + j.taken.map(t => fmt(t.start) + ' - ' + fmt(t.end)).join(', ');
+                        info.classList.remove('hidden');
+                    }).catch(() => {});
+            };
+            dateEl.addEventListener('change', load);
+            load();
+        }
         const input = document.getElementById('duration');
         const out = document.getElementById('estimate');
         if (!input || !out) return;

@@ -1,5 +1,7 @@
 # SpaceRent — Rencana MVP & Alur Bisnis
 
+> **Update:** keputusan guest checkout (bagian 2) diganti: sekarang ada akun **pembeli** dan **penjual** (marketplace multi-owner). Chat berbasis akun antara pembeli dan pemilik ruangan. Lihat README bagian "Peran Pengguna".
+
 Status: **DRAFT untuk disetujui** · Target: MVP yang bisa dipakai end-to-end, termasuk pembayaran Midtrans (Sandbox).
 
 ## 1. Kondisi Saat Ini (hasil audit kode)
