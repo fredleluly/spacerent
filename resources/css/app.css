@@ -1,9 +1,92 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/geist';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
+/*
+ * Design tokens SpaceRent.
+ * Satu aksen (koral-mawar), netral zinc, satu skala radius:
+ *   kartu/panel = 16px (rounded-2xl), kontrol/tombol = 12px (rounded-xl), chip/avatar = pill.
+ * Nama brand-* dipertahankan agar halaman lama otomatis memakai warna baru.
+ */
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+
+    --color-brand-50: #fff1f3;
+    --color-brand-100: #ffe1e6;
+    --color-brand-200: #ffc8d1;
+    --color-brand-300: #ff9db0;
+    --color-brand-400: #f66a88;
+    --color-brand-500: #e43f63;
+    --color-brand-600: #c42a4c;
+    --color-brand-700: #a21f3e;
+    --color-brand-800: #861c38;
+    --color-brand-900: #3f0f1c;
+
+    --color-ink: #18181b;
+    --shadow-soft: 0 1px 2px rgb(24 24 27 / 0.04), 0 8px 24px -8px rgb(24 24 27 / 0.12);
+    --shadow-lift: 0 2px 4px rgb(24 24 27 / 0.05), 0 18px 40px -12px rgb(24 24 27 / 0.22);
+}
+
+@layer base {
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body { @apply bg-white text-zinc-900 antialiased; font-feature-settings: 'cv11', 'ss01'; }
+    :focus-visible { @apply outline-2 outline-offset-2 outline-brand-600; }
+    select {
+        -webkit-appearance: none; appearance: none; background-repeat: no-repeat;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2352525b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        background-position: right .75rem center; padding-right: 2.25rem;
+    }
+    [x-cloak], [hidden] { display: none !important; }
+    dialog::backdrop { background: rgb(24 24 27 / 0.55); backdrop-filter: blur(2px); }
+}
+
+@layer components {
+    .btn { @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition duration-150 active:translate-y-px active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50; }
+    .btn-primary { @apply bg-brand-600 text-white shadow-sm hover:bg-brand-700; }
+    .btn-dark { @apply bg-zinc-900 text-white hover:bg-zinc-800; }
+    .btn-outline { @apply border border-zinc-300 bg-white text-zinc-800 hover:border-zinc-900; }
+    .btn-ghost { @apply text-zinc-700 hover:bg-zinc-100; }
+    .btn-danger { @apply border border-rose-300 bg-white text-rose-700 hover:bg-rose-50; }
+    .btn-lg { @apply px-6 py-3.5 text-base; }
+    .btn-sm { @apply px-3 py-1.5 text-xs; }
+
+    .label { @apply mb-1.5 block text-sm font-medium text-zinc-700; }
+    .help { @apply mt-1.5 text-xs text-zinc-600; }
+    .error { @apply mt-1.5 text-xs font-medium text-rose-700; }
+    .input { @apply w-full rounded-xl border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-500 transition focus:border-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-600/10; }
+    .input[aria-invalid='true'], .input.is-invalid { @apply border-rose-500; }
+
+    .card { @apply rounded-2xl border border-zinc-200 bg-white; }
+    .chip { @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-zinc-900; }
+    .chip[aria-current='true'], .chip.is-active { @apply border-zinc-900 bg-zinc-900 text-white; }
+
+    .badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold; }
+    .badge-neutral { @apply bg-zinc-100 text-zinc-700; }
+    .badge-success { @apply bg-emerald-100 text-emerald-800; }
+    .badge-warn { @apply bg-amber-100 text-amber-900; }
+    .badge-danger { @apply bg-rose-100 text-rose-800; }
+    .badge-info { @apply bg-sky-100 text-sky-800; }
+
+    .skeleton { @apply animate-pulse rounded-lg bg-zinc-200; }
+    .container-page { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }
+
+    /* Kalender & slot (booking widget) */
+    .cal-day { @apply relative flex h-10 w-full items-center justify-center rounded-full text-sm font-medium text-zinc-900 transition hover:bg-zinc-100; }
+    .cal-day[disabled] { @apply cursor-not-allowed text-zinc-400 line-through hover:bg-transparent; }
+    .cal-day.is-today { @apply ring-1 ring-zinc-400; }
+    .cal-day.is-selected { @apply bg-zinc-900 text-white hover:bg-zinc-900; }
+    .cal-day.is-range { @apply rounded-none bg-brand-50; }
+    .slot { @apply rounded-xl border border-zinc-300 px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:border-zinc-900; }
+    .slot[disabled] { @apply cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400 line-through hover:border-zinc-200; }
+    .slot.is-selected { @apply border-zinc-900 bg-zinc-900 text-white; }
+
+    /* Rating bintang input */
+    .star-input button { @apply text-zinc-300 transition hover:scale-110; }
+    .star-input button.is-on { @apply text-amber-400; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }

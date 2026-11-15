@@ -11,6 +11,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             SpaceSeeder::class,
             AdminSeeder::class,
+            DemoSeeder::class,
         ]);
     }
 }

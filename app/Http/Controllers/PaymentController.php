@@ -7,19 +7,23 @@ use App\Services\MidtransService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
-    public function pay(Booking $booking, MidtransService $midtrans): JsonResponse
+    public function pay(Request $request, Booking $booking, MidtransService $midtrans): JsonResponse
     {
+        abort_unless($booking->user_id === $request->user()->id, 403);
+
         if ($booking->payment_status === 'paid') {
             return response()->json(['message' => 'Booking sudah dibayar.'], 409);
         }
 
-        $expired = $booking->expires_at && Carbon::parse($booking->expires_at)->isPast();
-        if ($booking->status !== 'pending' || $booking->payment_status !== 'unpaid' || $expired) {
+        if ($booking->status === 'awaiting_approval') {
+            return response()->json(['message' => 'Booking ini menunggu persetujuan pemilik. Anda bisa membayar setelah disetujui.'], 422);
+        }
+
+        if (! $booking->isPayable()) {
             return response()->json(['message' => 'Booking tidak dapat dibayar (kedaluwarsa atau dibatalkan).'], 422);
         }
 
@@ -36,6 +40,8 @@ class PaymentController extends Controller
 
     public function finish(Request $request, Booking $booking, MidtransService $midtrans): RedirectResponse
     {
+        abort_unless($booking->user_id === $request->user()->id, 403);
+
         // Sinkronisasi opsional; sumber kebenaran tetap webhook.
         if ($booking->order_id && $booking->payment_status !== 'paid') {
             try {
@@ -51,9 +57,10 @@ class PaymentController extends Controller
 
         $booking->refresh();
 
-        $flash = match ($booking->payment_status) {
-            'paid' => ['success', 'Pembayaran berhasil. Booking Anda telah dikonfirmasi.'],
-            'failed', 'expired' => ['error', 'Pembayaran gagal atau kedaluwarsa.'],
+        $flash = match (true) {
+            $booking->payment_status === 'paid' => ['success', 'Pembayaran berhasil. Booking Anda telah dikonfirmasi.'],
+            $booking->payment_status === 'refund_pending' => ['error', 'Pembayaran diterima tetapi jadwal sudah tidak tersedia. Dana Anda akan dikembalikan penuh.'],
+            in_array($booking->payment_status, ['failed', 'expired'], true) => ['error', 'Pembayaran gagal atau kedaluwarsa.'],
             default => ['info', 'Pembayaran sedang diproses. Halaman akan diperbarui setelah pembayaran terkonfirmasi.'],
         };
 

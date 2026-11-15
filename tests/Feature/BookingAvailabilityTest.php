@@ -32,7 +32,7 @@ class BookingAvailabilityTest extends TestCase
         return $o + [
             'name' => 'Budi', 'email' => 'b@example.com', 'phone' => '081234567890',
             'date' => now()->addDays(3)->toDateString(), 'start_time' => '10:00',
-            'duration' => 2, 'guests' => 2,
+            'duration' => 2, 'guests' => 2, 'agree' => 1,
         ];
     }
 

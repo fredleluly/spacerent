@@ -1,14 +1,26 @@
 # SpaceRent
 
-Website penyewaan ruang kerja & event space (meeting room, private office, coworking, event space, studio podcast, virtual office) di Jakarta. Dibangun dengan Laravel, Blade, dan Tailwind CSS (CDN).
+Marketplace penyewaan ruang kerja & event space (meeting room, private office, coworking, event space, studio podcast, virtual office) di Jakarta, dengan alur pemesanan ala Airbnb dasar. Dibangun dengan Laravel, Blade, Tailwind CSS v4 (Vite), font Geist, dan ikon Lucide.
 
 ## Fitur
 
-- Beranda dengan hero, filter (kata kunci, wilayah, kapasitas), dan tab kategori
-- Daftar ruangan dengan halaman detail dan fasilitas
-- Form booking dengan estimasi total otomatis, validasi, dan kode booking
-- Halaman konfirmasi dengan tombol konfirmasi via WhatsApp
-- Syarat & Ketentuan, FAQ, dan form Hubungi Kami
+- **Pencarian**: filter wilayah, kapasitas, rating, satuan harga, dan **tanggal kosong**; urut harga, rating, terbaru; favorit.
+- **Pemesanan**: kalender + pemilih jam (jam terisi abu-abu), durasi, rincian harga (sewa, kebersihan, biaya layanan), pesan jauh hari sampai batas ruangan, anti double-booking (lock + validasi jam buka, jeda, lead time, blokir tanggal).
+- **Mode booking**: Instant Book atau perlu persetujuan penjual (otomatis batal bila tidak dijawab).
+- **Pembayaran** Midtrans; pembayaran terlambat tidak pernah menghidupkan booking yang slotnya sudah terisi, uangnya masuk antrean refund.
+- **Pembatalan & refund** sesuai kebijakan ruangan (Fleksibel / Moderat / Ketat), **jadwal ulang** 1 kali, pembatalan oleh penjual/admin selalu refund penuh.
+- **Ulasan & rating nyata**: hanya setelah booking selesai, sub-rating, komentar, **foto**, **anonim**, balasan penjual, laporan dan moderasi admin. Rating dihitung otomatis.
+- **Panel penjual**: kalender booking, blokir tanggal, setujui/tolak, ulasan, aturan jadwal per ruangan. **Panel admin**: moderasi, refund (Midtrans atau manual), audit lewat soft delete.
+- Email siklus booking dan pengingat H-7 / H-1.
+- **Payout penjual**: komisi platform (`SPACERENT_COMMISSION`, default 10%), halaman Pendapatan (saldo, rincian per booking, rekening), penarikan minimum Rp 50.000 setelah masa tahan 1 hari, dan menu Penarikan di admin untuk menandai transfer atau menolak. Catatan: pencairan bank masih manual oleh admin.
+
+- **Chatbot bantuan** di kanan bawah (anonim boleh bertanya): membaca database lewat tool read-only; pesanan dan riwayat hanya untuk pemilik akun yang login. Provider diganti di Admin > Chatbot AI: mesin aturan (bawaan), Google Gemini Flash (kunci terenkripsi), atau Ollama lokal, dengan fallback otomatis. Panduan: `docs/CHATBOT.md`.
+- **Peta** (Leaflet + OpenStreetMap): cari ruangan di peta dan "Dekat saya" dari beranda, penjual menetapkan lokasi ruangan (klik peta, cari alamat, lokasi saya), peta kecil di halaman ruangan.
+- **Section SDGs** di landing page (SDG 11 sebagai goal utama, plus 8, 9, 12, 13, 17) dengan animasi, angka platform dari database, dan sumber.
+
+**Mulai cepat:** `bash scripts/dev.sh` (backend port 8000, bisa dibuka dari HP). Panduan lengkap, akun, alur klik, dan study case: **`docs/PANDUAN.md`**.
+
+Dokumen: `docs/AUDIT-REVAMP.md` (audit), `docs/STUDY-CASES.md` (katalog kasus uji), `docs/PLAN-MVP.md` (rencana awal).
 
 ## Peran Pengguna (Marketplace)
 Ada tiga peran. Pembeli dan penjual mendaftar sendiri di `/daftar` (pilih "Pembeli" atau "Penjual"), login di `/masuk`.
@@ -36,6 +48,7 @@ Menu admin: Dashboard (statistik), CRUD Ruangan (upload gambar atau URL), Bookin
 
 ```sh
 composer install
+npm install && npm run build
 cp .env.example .env
 php artisan key:generate
 touch database/database.sqlite
@@ -43,6 +56,8 @@ php artisan migrate --seed
 php artisan storage:link
 php artisan serve
 ```
+
+Zona waktu aplikasi `Asia/Jakarta` (ubah lewat `APP_TIMEZONE`). Selama pengembangan UI jalankan `npm run dev`. Test: `php artisan test` (174 test, termasuk `BookingScenarioProbeTest` dan `BookingLifecycleTest`).
 
 Buka http://127.0.0.1:8000.
 

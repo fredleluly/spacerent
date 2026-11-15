@@ -22,7 +22,7 @@ class SellerPanelTest extends TestCase
 
     private function space(User $owner, string $name): Space
     {
-        return Space::create([
+        return Space::forceCreate([
             'name' => $name, 'slug' => str($name)->slug(), 'category' => 'meeting-room', 'area' => 'Jakarta Selatan',
             'district' => 'Kuningan', 'capacity' => 10, 'price' => 100000, 'price_unit' => 'jam',
             'image' => 'x.jpg', 'description' => 'desc', 'user_id' => $owner->id,
@@ -105,7 +105,7 @@ class SellerPanelTest extends TestCase
         $this->assertFalse($sa->fresh()->is_available);
 
         $this->actingAs($a)->delete(route('seller.spaces.destroy', $sa->fresh()))->assertSessionHas('success');
-        $this->assertDatabaseMissing('spaces', ['id' => $sa->id]);
+        $this->assertSoftDeleted('spaces', ['id' => $sa->id]);
     }
 
     public function test_cannot_delete_space_with_upcoming_paid_booking(): void
@@ -131,7 +131,7 @@ class SellerPanelTest extends TestCase
     public function test_cancel_and_complete_transitions(): void
     {
         [$a, $b, $sa, $sb] = $this->setup2();
-        $paid = $this->booking($sa, ['status' => 'confirmed', 'payment_status' => 'paid']);
+        $paid = $this->booking($sa, ['status' => 'confirmed', 'payment_status' => 'paid', 'starts_at' => now()->subHours(3), 'end_at' => now()->addHour()]);
         $pending = $this->booking($sa);
 
         $this->actingAs($a)->post(route('seller.bookings.complete', $pending))->assertSessionHas('error');
@@ -153,8 +153,8 @@ class SellerPanelTest extends TestCase
     public function test_cancelled_paid_shows_refund_note(): void
     {
         [$a, , $sa] = $this->setup2();
-        $b = $this->booking($sa, ['status' => 'cancelled', 'payment_status' => 'paid']);
+        $b = $this->booking($sa, ['status' => 'cancelled', 'payment_status' => 'refund_pending', 'refund_status' => 'pending', 'refund_amount' => 200000, 'cancelled_by' => 'seller']);
 
-        $this->actingAs($a)->get(route('seller.bookings.show', $b))->assertSee('Refund diproses oleh admin SpaceRent');
+        $this->actingAs($a)->get(route('seller.bookings.show', $b))->assertSee('Menunggu refund')->assertSee('Rp 200.000');
     }
 }

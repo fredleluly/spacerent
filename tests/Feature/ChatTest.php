@@ -25,7 +25,7 @@ class ChatTest extends TestCase
 
     private function space(User $seller, string $slug = 'ruang-a'): Space
     {
-        return Space::create([
+        return Space::forceCreate([
             'name' => 'Ruang '.$slug, 'slug' => $slug, 'category' => 'meeting-room', 'area' => 'Jakarta Pusat',
             'district' => 'Menteng', 'capacity' => 8, 'price' => 100000, 'price_unit' => 'jam',
             'image' => 'x.jpg', 'description' => 'desc', 'user_id' => $seller->id,

@@ -16,6 +16,11 @@ Route::get('/', [SpaceController::class, 'index'])->name('home');
 Route::get('/ruangan/{space}', [SpaceController::class, 'show'])->name('spaces.show');
 
 Route::get('/ruangan/{space}/availability', [BookingController::class, 'availability'])->name('spaces.availability');
+
+// Peta (penanda ruangan, bisa diurut dari koordinat pengguna) dan chatbot bantuan (boleh anonim)
+Route::get('/peta/ruangan', [\App\Http\Controllers\MapController::class, 'markers'])->name('spaces.map');
+Route::get('/chatbot/config', [\App\Http\Controllers\ChatbotController::class, 'config'])->name('chatbot.config');
+Route::post('/chatbot/message', [\App\Http\Controllers\ChatbotController::class, 'message'])->middleware('throttle:40,1')->name('chatbot.message');
 // Autentikasi pembeli & penjual
 Route::middleware('guest')->group(function () {
     Route::get('/daftar', [Auth\RegisterController::class, 'create'])->name('register');
@@ -37,6 +42,13 @@ Route::middleware(['auth', 'role:buyer'])->group(function () {
     Route::post('/akun/chat/{conversation}/messages', [Buyer\ChatController::class, 'send'])->middleware('throttle:20,1')->name('buyer.chats.send');
     Route::post('/ruangan/{space}/chat', [ChatController::class, 'startForSpace'])->middleware('throttle:10,1')->name('chat.start.space');
     Route::post('/booking/{booking}/chat', [ChatController::class, 'startForBooking'])->middleware('throttle:10,1')->name('chat.start.booking');
+    Route::post('/booking/{booking}/cancel', [BookingController::class, 'cancel'])->middleware('throttle:10,1')->name('booking.cancel');
+    Route::post('/booking/{booking}/reschedule', [BookingController::class, 'reschedule'])->middleware('throttle:10,1')->name('booking.reschedule');
+    Route::post('/booking/{booking}/ulasan', [Buyer\ReviewController::class, 'store'])->middleware('throttle:10,1')->name('reviews.store');
+    Route::put('/ulasan/{review}', [Buyer\ReviewController::class, 'update'])->name('reviews.update');
+    Route::post('/ulasan/{review}/laporkan', [Buyer\ReviewController::class, 'report'])->middleware('throttle:10,1')->name('reviews.report');
+    Route::get('/akun/favorit', [Buyer\FavoriteController::class, 'index'])->name('buyer.favorites');
+    Route::post('/ruangan/{space}/favorit', [Buyer\FavoriteController::class, 'toggle'])->middleware('throttle:60,1')->name('favorites.toggle');
     Route::get('/akun/profil', [Buyer\ProfileController::class, 'edit'])->name('buyer.profile');
     Route::put('/akun/profil', [Buyer\ProfileController::class, 'update']);
 });
@@ -67,8 +79,22 @@ Route::prefix('penjual')->name('seller.')->middleware(['auth', 'role:seller'])->
 
     Route::get('bookings', [Seller\BookingController::class, 'index'])->name('bookings.index');
     Route::get('bookings/{booking}', [Seller\BookingController::class, 'show'])->name('bookings.show');
+    Route::post('bookings/{booking}/approve', [Seller\BookingController::class, 'approve'])->name('bookings.approve');
+    Route::post('bookings/{booking}/reject', [Seller\BookingController::class, 'reject'])->name('bookings.reject');
     Route::post('bookings/{booking}/cancel', [Seller\BookingController::class, 'cancel'])->name('bookings.cancel');
     Route::post('bookings/{booking}/complete', [Seller\BookingController::class, 'complete'])->name('bookings.complete');
+    Route::post('bookings/{booking}/no-show', [Seller\BookingController::class, 'noShow'])->name('bookings.no-show');
+
+    Route::get('kalender', [Seller\CalendarController::class, 'index'])->name('calendar');
+    Route::post('ruangan/{space}/penutupan', [Seller\BlackoutController::class, 'store'])->name('blackouts.store');
+    Route::delete('penutupan/{blackout}', [Seller\BlackoutController::class, 'destroy'])->name('blackouts.destroy');
+
+    Route::get('ulasan', [Seller\ReviewController::class, 'index'])->name('reviews.index');
+    Route::post('ulasan/{review}/balas', [Seller\ReviewController::class, 'reply'])->name('reviews.reply');
+
+    Route::get('pendapatan', [Seller\PayoutController::class, 'index'])->name('payouts.index');
+    Route::post('pendapatan/rekening', [Seller\PayoutController::class, 'saveBank'])->name('payouts.bank');
+    Route::post('pendapatan/tarik', [Seller\PayoutController::class, 'request'])->middleware('throttle:10,1')->name('payouts.request');
 
     Route::get('chat', [Seller\ChatController::class, 'index'])->name('chats.index');
     Route::get('chat/{conversation}', [Seller\ChatController::class, 'show'])->name('chats.show');
@@ -97,10 +123,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::get('bookings', [Admin\BookingController::class, 'index'])->name('bookings.index');
         Route::get('bookings/{booking}', [Admin\BookingController::class, 'show'])->name('bookings.show');
-        Route::patch('bookings/{booking}', [Admin\BookingController::class, 'update'])->name('bookings.update');
         Route::post('bookings/{booking}/cancel', [Admin\BookingController::class, 'cancel'])->name('bookings.cancel');
         Route::post('bookings/{booking}/refund', [Admin\BookingController::class, 'refund'])->name('bookings.refund');
         Route::post('bookings/{booking}/complete', [Admin\BookingController::class, 'complete'])->name('bookings.complete');
+        Route::post('bookings/{booking}/no-show', [Admin\BookingController::class, 'noShow'])->name('bookings.no-show');
+
+        Route::get('reviews', [Admin\ReviewController::class, 'index'])->name('reviews.index');
+        Route::post('reviews/{review}/toggle', [Admin\ReviewController::class, 'toggle'])->name('reviews.toggle');
+
+        Route::get('payouts', [Admin\PayoutController::class, 'index'])->name('payouts.index');
+        Route::post('payouts/{payout}/paid', [Admin\PayoutController::class, 'paid'])->name('payouts.paid');
+        Route::post('payouts/{payout}/reject', [Admin\PayoutController::class, 'reject'])->name('payouts.reject');
         Route::delete('bookings/{booking}', [Admin\BookingController::class, 'destroy'])->name('bookings.destroy');
 
         Route::get('chats', [Admin\ChatController::class, 'index'])->name('chats.index');
@@ -110,6 +143,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::patch('chats/{conversation}', [Admin\ChatController::class, 'toggle'])->name('chats.toggle');
 
         Route::get('users', [Admin\UserController::class, 'index'])->name('users.index');
+
+        Route::get('chatbot', [Admin\ChatbotSettingsController::class, 'edit'])->name('chatbot.edit');
+        Route::put('chatbot', [Admin\ChatbotSettingsController::class, 'update'])->name('chatbot.update');
+        Route::post('chatbot/test', [Admin\ChatbotSettingsController::class, 'test'])->middleware('throttle:10,1')->name('chatbot.test');
 
         Route::get('messages', [Admin\MessageController::class, 'index'])->name('messages.index');
         Route::get('messages/{message}', [Admin\MessageController::class, 'show'])->name('messages.show');

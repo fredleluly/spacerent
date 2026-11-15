@@ -2,44 +2,21 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exceptions\BookingException;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
-use Carbon\Carbon;
+use App\Services\BookingService;
+use App\Services\MidtransService;
 use Illuminate\Http\Request;
 
 class BookingController extends Controller
 {
-    public const STATUSES = [
-        'pending' => 'Menunggu',
-        'confirmed' => 'Dikonfirmasi',
-        'completed' => 'Selesai',
-        'cancelled' => 'Dibatalkan',
-    ];
-
-    public const PAYMENT_STATUSES = [
-        'unpaid' => 'Belum Dibayar',
-        'paid' => 'Lunas',
-        'failed' => 'Gagal',
-        'expired' => 'Kedaluwarsa',
-        'refunded' => 'Dikembalikan',
-    ];
-
-    /** Persentase refund berdasarkan jam tersisa sebelum sewa. */
-    public static function refundPercent(Booking $booking): int
-    {
-        $start = $booking->starts_at
-            ? Carbon::parse($booking->starts_at)
-            : Carbon::parse($booking->date->toDateString().' '.($booking->start_time ?: '00:00'));
-        $hours = now()->diffInHours($start, false);
-
-        return $hours >= 48 ? 100 : ($hours >= 24 ? 50 : 0);
-    }
-
     public function index(Request $request)
     {
         $bookings = Booking::with('space')
             ->when($request->query('status'), fn ($q, $v) => $q->where('status', $v))
             ->when($request->query('payment_status'), fn ($q, $v) => $q->where('payment_status', $v))
+            ->when($request->query('refund'), fn ($q) => $q->where('refund_status', 'pending'))
             ->when($request->query('q'), fn ($q, $v) => $q->where(fn ($w) => $w
                 ->where('code', 'like', "%{$v}%")
                 ->orWhere('name', 'like', "%{$v}%")
@@ -48,69 +25,77 @@ class BookingController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        return view('admin.bookings.index', ['bookings' => $bookings, 'statuses' => self::STATUSES, 'paymentStatuses' => self::PAYMENT_STATUSES]);
+        return view('admin.bookings.index', [
+            'bookings' => $bookings,
+            'statuses' => Booking::STATUSES,
+            'paymentStatuses' => Booking::PAYMENT_STATUSES,
+            'refundPending' => Booking::where('refund_status', 'pending')->count(),
+        ]);
     }
 
     public function show(Booking $booking)
     {
         return view('admin.bookings.show', [
-            'booking' => $booking->load('space'),
-            'statuses' => self::STATUSES,
-            'paymentStatuses' => self::PAYMENT_STATUSES,
-            'refundPercent' => self::refundPercent($booking),
+            'booking' => $booking->load(['space', 'review']),
+            'statuses' => Booking::STATUSES,
+            'paymentStatuses' => Booking::PAYMENT_STATUSES,
         ]);
     }
 
-    public function update(Request $request, Booking $booking)
+    public function cancel(Request $request, Booking $booking, BookingService $bookings)
     {
-        $data = $request->validate([
-            'status' => ['required', 'in:'.implode(',', array_keys(self::STATUSES))],
-        ]);
+        $data = $request->validate(['reason' => ['nullable', 'string', 'max:200']]);
 
-        $booking->update($data);
-
-        return back()->with('success', 'Status booking diperbarui.');
+        return $this->run(
+            fn () => $bookings->cancel($booking, 'admin', $data['reason'] ?? null),
+            $booking->payment_status === 'paid' ? 'Booking dibatalkan. Refund penuh menunggu diproses.' : 'Booking dibatalkan.'
+        );
     }
 
-    public function cancel(Booking $booking)
+    /** Tandai refund sudah dikirim (manual) atau jalankan lewat API Midtrans bila `via=gateway`. */
+    public function refund(Request $request, Booking $booking, BookingService $bookings, MidtransService $midtrans)
     {
-        if (in_array($booking->status, ['cancelled', 'completed'], true)) {
-            return back()->with('error', 'Booking dengan status ini tidak bisa dibatalkan.');
+        if ($request->input('via') === 'gateway') {
+            try {
+                $midtrans->refund($booking);
+            } catch (\Throwable $e) {
+                return back()->with('error', 'Refund via Midtrans gagal: '.$e->getMessage().' Anda bisa menandainya manual setelah mengirim dana.');
+            }
         }
 
-        $booking->forceFill(['status' => 'cancelled'])->save();
-
-        return back()->with('success', $booking->payment_status === 'paid'
-            ? 'Booking dibatalkan. Booking sudah dibayar: perlu refund manual.'
-            : 'Booking dibatalkan.');
+        return $this->run(fn () => $bookings->markRefunded($booking), 'Refund ditandai selesai.');
     }
 
-    public function refund(Booking $booking)
+    public function complete(Booking $booking, BookingService $bookings)
     {
-        if ($booking->payment_status !== 'paid' || $booking->status !== 'cancelled') {
-            return back()->with('error', 'Hanya booking lunas yang sudah dibatalkan yang bisa ditandai refunded.');
-        }
-
-        $booking->forceFill(['payment_status' => 'refunded'])->save();
-
-        return back()->with('success', 'Booking ditandai sudah dikembalikan (refunded).');
+        return $this->run(fn () => $bookings->complete($booking), 'Booking ditandai selesai.');
     }
 
-    public function complete(Booking $booking)
+    public function noShow(Booking $booking, BookingService $bookings)
     {
-        if ($booking->status !== 'confirmed' || $booking->payment_status !== 'paid') {
-            return back()->with('error', 'Hanya booking terkonfirmasi dan lunas yang bisa diselesaikan.');
-        }
-
-        $booking->forceFill(['status' => 'completed'])->save();
-
-        return back()->with('success', 'Booking ditandai selesai.');
+        return $this->run(fn () => $bookings->markNoShow($booking), 'Booking ditandai tidak hadir.');
     }
 
+    /** Hanya booking yang tidak pernah menerima uang yang boleh dihapus (soft delete). */
     public function destroy(Booking $booking)
     {
+        if ($booking->paid_at !== null || in_array($booking->payment_status, ['paid', 'refund_pending', 'refunded'], true) || $booking->isActive()) {
+            return back()->with('error', 'Booking aktif atau yang pernah dibayar tidak boleh dihapus. Batalkan dan selesaikan refund lebih dulu.');
+        }
+
         $booking->delete();
 
-        return redirect()->route('admin.bookings.index')->with('success', 'Booking berhasil dihapus.');
+        return redirect()->route('admin.bookings.index')->with('success', 'Booking diarsipkan.');
+    }
+
+    private function run(\Closure $action, string $success)
+    {
+        try {
+            $action();
+        } catch (BookingException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', $success);
     }
 }

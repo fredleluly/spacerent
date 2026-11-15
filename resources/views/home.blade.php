@@ -1,155 +1,135 @@
 @extends('layouts.app')
 
+@section('title', 'SpaceRent - Sewa ruang kerja dan event space di Jakarta')
+
 @section('content')
+@php
+    $active = collect($filters)->except('sort')->filter(fn ($v) => $v !== null && $v !== '');
+    $hero = $heroSpaces ?? collect();
+    $catUrl = fn ($slug) => route('home', array_filter(array_merge($filters, ['category' => $slug]))).'#ruangan';
+@endphp
+
 {{-- Hero --}}
-<section class="relative overflow-hidden bg-brand-900">
-    <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1920&q=70" alt="" class="absolute inset-0 h-full w-full object-cover opacity-30" onerror="this.style.display='none'">
-    <div class="absolute inset-0 bg-gradient-to-b from-slate-900/60 via-brand-900/80 to-brand-900"></div>
-
-    <div class="relative mx-auto max-w-6xl px-4 pb-16 pt-14 text-center md:pt-20">
-        <span class="inline-block rounded-full border border-sky-400/40 bg-sky-400/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider text-sky-300">
-            Penyedia Space &amp; Ruang Kerja #1 di Jakarta
-        </span>
-        <h1 class="mx-auto mt-6 max-w-3xl text-4xl font-extrabold leading-[1.05] tracking-tight text-white md:text-6xl">
-            Sewa Ruang Kerja &amp; Event Space Tanpa Ribet &amp; Transparan
-        </h1>
-        <p class="mx-auto mt-5 max-w-2xl text-base text-slate-200 md:text-lg">
-            Pilihan lengkap Meeting Room, Private Office, Coworking, dan Event Venue siap pakai dengan fasilitas lengkap di seluruh titik strategis Jakarta.
-        </p>
-
-        {{-- Filter --}}
-        <form method="GET" action="{{ route('home') }}#ruangan" class="mx-auto mt-10 grid max-w-4xl gap-3 rounded-2xl bg-white p-4 text-left shadow-2xl md:grid-cols-[1.1fr_1.1fr_1.1fr_auto] md:items-end">
-            @if (!empty($filters['category']))
-                <input type="hidden" name="category" value="{{ $filters['category'] }}">
-            @endif
-            <label class="block">
-                <span class="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500"><i data-lucide="search" class="h-3.5 w-3.5 text-brand-600"></i>Cari Nama / Kata Kunci</span>
-                <input type="text" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Contoh: SCBD, Meeting, Podcast"
-                       class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20">
-            </label>
-            <label class="block">
-                <span class="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500"><i data-lucide="map-pin" class="h-3.5 w-3.5 text-brand-600"></i>Pilih Wilayah</span>
-                <select name="area" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20">
-                    <option value="">Semua Lokasi Jakarta</option>
-                    @foreach (\App\Models\Space::AREAS as $area)
-                        <option value="{{ $area }}" @selected(($filters['area'] ?? '') === $area)>{{ $area }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="block">
-                <span class="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500"><i data-lucide="users" class="h-3.5 w-3.5 text-brand-600"></i>Kapasitas Orang</span>
-                <select name="capacity" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20">
-                    <option value="">Semua Kapasitas</option>
-                    @foreach (\App\Models\Space::CAPACITIES as $value => $label)
-                        <option value="{{ $value }}" @selected(($filters['capacity'] ?? '') === $value)>{{ $label }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-brand-600/30 transition hover:bg-brand-700">
-                <i data-lucide="filter" class="h-4 w-4"></i> Terapkan Filter
-            </button>
-        </form>
-
-        {{-- Stats --}}
-        <div class="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-3 md:grid-cols-4">
-            @foreach ([['50+', 'Pilihan Lokasi Space'], ['10.000+', 'Pelanggan & Korporasi'], ['100%', 'Siap Pakai & Siap Rapat'], ['4.9 / 5', 'Rating Kepuasan']] as [$n, $l])
-                <div class="rounded-xl border border-white/10 bg-white/5 px-4 py-4 backdrop-blur">
-                    <p class="text-2xl font-extrabold text-white">{{ $n }}</p>
-                    <p class="mt-0.5 text-xs text-slate-300">{{ $l }}</p>
-                </div>
-            @endforeach
+<section class="container-page grid items-center gap-10 pb-10 pt-10 lg:grid-cols-[1.05fr_1fr] lg:pt-14">
+    <div>
+        <h1 class="max-w-xl text-4xl font-semibold leading-[1.08] tracking-tight text-zinc-900 md:text-5xl lg:text-6xl">Ruang kerja yang pas untuk hari Anda.</h1>
+        <p class="mt-5 max-w-lg text-lg leading-relaxed text-zinc-600">Lihat jadwal kosong, pilih jam, dan bayar online. Meeting room, studio, dan event space di Jakarta.</p>
+        <div class="mt-8 flex flex-wrap gap-3">
+            <a href="#ruangan" class="btn btn-primary btn-lg">Cari ruangan</a>
+            <a href="{{ route('register', ['role' => 'seller']) }}" class="btn btn-outline btn-lg">Daftarkan ruangan</a>
         </div>
+    </div>
+    <div class="grid grid-cols-5 grid-rows-2 gap-3" aria-hidden="true">
+        @foreach ([[0, 'col-span-3 row-span-2 aspect-[3/4]'], [1, 'col-span-2 aspect-square'], [2, 'col-span-2 aspect-[4/3]']] as [$i, $cls])
+            <div class="{{ $cls }} overflow-hidden rounded-2xl bg-zinc-100">
+                @if ($hero->get($i))
+                    <img src="{{ $hero[$i]->image_url }}" alt="" class="h-full w-full object-cover" @if($i === 0) fetchpriority="high" @endif>
+                @endif
+            </div>
+        @endforeach
     </div>
 </section>
 
-{{-- Categories --}}
-<section class="bg-white py-12">
-    <div class="mx-auto max-w-6xl px-4">
-        <p class="text-center text-[11px] font-bold uppercase tracking-widest text-brand-600">Kategori Layanan</p>
-        <h2 class="mt-2 text-center text-2xl font-extrabold text-ink md:text-3xl">Pilih Jenis Ruangan Sesuai Kebutuhan Anda</h2>
-
-        @php
-            $active = $filters['category'] ?? null;
-            $keep = collect($filters)->except('category')->all();
-        @endphp
-        <div class="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-            <a href="{{ route('home', $keep) }}#ruangan" class="flex flex-col items-center gap-2 rounded-xl border px-3 py-4 text-xs font-semibold transition {{ !$active ? 'border-brand-600 bg-brand-600 text-white shadow-lg shadow-brand-600/30' : 'border-slate-200 bg-white text-slate-600 hover:border-brand-500 hover:text-brand-600' }}">
-                <i data-lucide="layout-grid" class="h-5 w-5"></i>Semua Ruangan
-            </a>
-            @foreach (\App\Models\Space::CATEGORIES as $slug => $c)
-                <a href="{{ route('home', $keep + ['category' => $slug]) }}#ruangan" class="flex flex-col items-center gap-2 rounded-xl border px-3 py-4 text-xs font-semibold transition {{ $active === $slug ? 'border-brand-600 bg-brand-600 text-white shadow-lg shadow-brand-600/30' : 'border-slate-200 bg-white text-slate-600 hover:border-brand-500 hover:text-brand-600' }}">
-                    <i data-lucide="{{ $c['icon'] }}" class="h-5 w-5"></i>{{ $c['label'] }}
-                </a>
-            @endforeach
-        </div>
-    </div>
+{{-- Pencarian --}}
+<section class="container-page">
+    <form method="GET" action="{{ route('home') }}#ruangan" class="card grid gap-3 p-3 shadow-soft md:grid-cols-[1.5fr_1fr_1fr_auto] md:items-end md:p-4">
+        <label class="block"><span class="label">Cari</span>
+            <input type="search" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Nama ruangan atau kawasan" class="input">
+        </label>
+        <label class="block"><span class="label">Wilayah</span>
+            <select name="area" class="input">
+                <option value="">Semua wilayah</option>
+                @foreach (\App\Models\Space::AREAS as $a)<option value="{{ $a }}" @selected(($filters['area'] ?? '') === $a)>{{ $a }}</option>@endforeach
+            </select>
+        </label>
+        <label class="block"><span class="label">Tanggal</span>
+            <input type="date" name="date" value="{{ $filters['date'] ?? '' }}" min="{{ today()->toDateString() }}" class="input">
+        </label>
+        <button class="btn btn-dark h-[46px]"><i data-lucide="search" class="h-4 w-4"></i> Cari</button>
+        @if (! empty($filters['category']))<input type="hidden" name="category" value="{{ $filters['category'] }}">@endif
+    </form>
 </section>
 
-{{-- Listing --}}
-<section id="ruangan" class="scroll-mt-20 bg-slate-50 py-14">
-    <div class="mx-auto max-w-6xl px-4">
-        <div class="flex flex-wrap items-end justify-between gap-3">
-            <div>
-                <p class="text-[11px] font-bold uppercase tracking-widest text-brand-600">Armada Ruangan &amp; Venue</p>
-                <h2 class="mt-2 text-2xl font-extrabold text-ink md:text-3xl">Pilihan Unit Ruangan Siap Sewa</h2>
-            </div>
-            <p class="text-sm text-slate-500">Menampilkan <b class="text-ink">{{ $spaces->count() }}</b> ruangan tersedia</p>
-        </div>
+{{-- Peta --}}
+@include('partials.space-map')
 
-        @if ($spaces->isEmpty())
-            <div class="mt-10 rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center">
-                <i data-lucide="search-x" class="mx-auto h-10 w-10 text-slate-300"></i>
-                <p class="mt-4 font-bold text-ink">Ruangan tidak ditemukan</p>
-                <p class="mt-1 text-sm text-slate-500">Coba ubah kata kunci atau reset filter Anda.</p>
-                <a href="{{ route('home') }}#ruangan" class="mt-5 inline-block rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-700">Reset Filter</a>
-            </div>
-        @else
-            <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                @foreach ($spaces as $space)
-                    @include('partials.space-card', ['space' => $space])
-                @endforeach
-            </div>
+{{-- Daftar --}}
+<section id="ruangan" class="container-page scroll-mt-20 pt-10">
+    <div class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
+        <a href="{{ $catUrl(null) }}" class="chip" @if (empty($filters['category'])) aria-current="true" @endif>Semua</a>
+        @foreach (\App\Models\Space::CATEGORIES as $slug => $c)
+            <a href="{{ $catUrl($slug) }}" class="chip" @if (($filters['category'] ?? '') === $slug) aria-current="true" @endif><i data-lucide="{{ $c['icon'] }}" class="h-4 w-4"></i>{{ $c['label'] }}</a>
+        @endforeach
+    </div>
+
+    <form method="GET" action="{{ route('home') }}#ruangan" class="mt-4 flex flex-wrap items-center gap-2">
+        @foreach (['q', 'area', 'category', 'date', 'capacity'] as $keep)
+            @if (! empty($filters[$keep]))<input type="hidden" name="{{ $keep }}" value="{{ $filters[$keep] }}">@endif
+        @endforeach
+        <select name="sort" class="input !w-auto" aria-label="Urutkan" onchange="this.form.submit()">
+            @foreach (\App\Models\Space::SORTS as $k => $label)<option value="{{ $k }}" @selected(($filters['sort'] ?? 'recommended') === $k)>{{ $label }}</option>@endforeach
+        </select>
+        <select name="unit" class="input !w-auto" aria-label="Satuan sewa" onchange="this.form.submit()">
+            <option value="">Semua satuan</option>
+            <option value="jam" @selected(($filters['unit'] ?? '') === 'jam')>Per jam</option>
+            <option value="hari" @selected(($filters['unit'] ?? '') === 'hari')>Per hari</option>
+            <option value="bulan" @selected(($filters['unit'] ?? '') === 'bulan')>Per bulan</option>
+        </select>
+        <select name="min_rating" class="input !w-auto" aria-label="Rating minimum" onchange="this.form.submit()">
+            <option value="">Semua rating</option>
+            @foreach ([4.5, 4, 3] as $r)<option value="{{ $r }}" @selected((string) ($filters['min_rating'] ?? '') === (string) $r)>Rating {{ $r }}+</option>@endforeach
+        </select>
+        <select name="capacity" class="input !w-auto" aria-label="Kapasitas" onchange="this.form.submit()">
+            <option value="">Semua kapasitas</option>
+            @foreach (\App\Models\Space::CAPACITIES as $k => $label)<option value="{{ $k }}" @selected(($filters['capacity'] ?? '') === $k)>{{ $label }}</option>@endforeach
+        </select>
+        <p class="ml-auto text-sm text-zinc-600">{{ $spaces->total() }} ruangan</p>
+        @if ($active->isNotEmpty())
+            <a href="{{ route('home') }}#ruangan" class="text-sm font-semibold text-brand-700 underline underline-offset-4">Reset filter</a>
         @endif
+    </form>
+
+    @if ($spaces->isEmpty())
+        <div class="mx-auto mt-14 max-w-md rounded-2xl border border-dashed border-zinc-300 p-10 text-center">
+            <i data-lucide="search-x" class="mx-auto h-10 w-10 text-zinc-500"></i>
+            <h2 class="mt-4 text-lg font-semibold">Belum ada ruangan yang cocok</h2>
+            <p class="mt-1 text-sm text-zinc-600">Coba ganti tanggal, longgarkan filter, atau lihat semua ruangan.</p>
+            <a href="{{ route('home') }}#ruangan" class="btn btn-dark mt-5">Lihat semua ruangan</a>
+        </div>
+    @else
+        <div class="mt-8 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+            @foreach ($spaces as $space)
+                @include('partials.space-card', ['space' => $space])
+            @endforeach
+        </div>
+        <div class="mt-12">{{ $spaces->links() }}</div>
+    @endif
+</section>
+
+{{-- Cara kerja --}}
+<section class="container-page mt-20 grid items-center gap-10 lg:grid-cols-2">
+    <div class="aspect-[5/4] overflow-hidden rounded-2xl bg-zinc-100">
+        @if ($hero->get(1))<img src="{{ $hero[1]->image_url }}" alt="" loading="lazy" class="h-full w-full object-cover">@endif
+    </div>
+    <div>
+        <h2 class="text-3xl font-semibold tracking-tight">Pesan tanpa tebak-tebakan</h2>
+        <ul class="mt-8 space-y-7">
+            <li class="flex gap-4"><span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><i data-lucide="calendar-days" class="h-5 w-5"></i></span><div><h3 class="font-semibold">Pilih jadwal dari kalender</h3><p class="mt-1 text-sm leading-relaxed text-zinc-600">Jam yang sudah terisi langsung abu-abu. Tidak perlu bertanya apakah ruangan masih kosong.</p></div></li>
+            <li class="flex gap-4"><span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><i data-lucide="wallet" class="h-5 w-5"></i></span><div><h3 class="font-semibold">Bayar dengan harga yang jelas</h3><p class="mt-1 text-sm leading-relaxed text-zinc-600">Sewa, biaya kebersihan, dan biaya layanan tampil sebelum Anda membayar. Slot ditahan selama {{ config('midtrans.expiry_minutes', 30) }} menit.</p></div></li>
+            <li class="flex gap-4"><span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><i data-lucide="undo-2" class="h-5 w-5"></i></span><div><h3 class="font-semibold">Batal dan refund sesuai kebijakan</h3><p class="mt-1 text-sm leading-relaxed text-zinc-600">Setiap ruangan menampilkan kebijakan batalnya. Jika pemilik membatalkan, Anda menerima refund penuh.</p></div></li>
+        </ul>
     </div>
 </section>
 
-{{-- Why us --}}
-<section class="bg-white py-16">
-    <div class="mx-auto max-w-6xl px-4">
-        <div class="mx-auto max-w-2xl text-center">
-            <p class="text-[11px] font-bold uppercase tracking-widest text-brand-600">Kenapa SpaceRent</p>
-            <h2 class="mt-2 text-2xl font-extrabold md:text-3xl">Semua Kebutuhan Ruang, Satu Tempat</h2>
-        </div>
-        <div class="mt-10 grid gap-6 md:grid-cols-4">
-            @foreach ([
-                ['receipt', 'Harga Transparan', 'Tanpa biaya tersembunyi. Semua fasilitas tertera jelas di setiap ruangan.'],
-                ['zap', 'Siap Pakai', 'Furnitur, WiFi, dan perangkat presentasi sudah lengkap dan terawat.'],
-                ['map-pinned', 'Lokasi Strategis', 'Titik premium di SCBD, Thamrin, Kuningan, Kemang, dan sekitarnya.'],
-                ['headset', 'Layanan 24/7', 'Tim kami siap membantu reservasi lewat WhatsApp kapan saja.'],
-            ] as [$icon, $title, $desc])
-                <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-                    <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600"><i data-lucide="{{ $icon }}" class="h-5 w-5"></i></span>
-                    <h3 class="mt-4 font-bold">{{ $title }}</h3>
-                    <p class="mt-1.5 text-sm leading-relaxed text-slate-500">{{ $desc }}</p>
-                </div>
-            @endforeach
-        </div>
-    </div>
-</section>
+@include('partials.sdgs-section')
 
-{{-- Steps --}}
-<section class="bg-brand-900 py-16 text-white">
-    <div class="mx-auto max-w-6xl px-4">
-        <h2 class="text-center text-2xl font-extrabold md:text-3xl">Cara Memesan</h2>
-        <div class="mt-10 grid gap-6 md:grid-cols-3">
-            @foreach ([['1', 'Pilih Ruangan', 'Gunakan filter wilayah, kapasitas, dan kategori untuk menemukan space yang pas.'], ['2', 'Isi Form Booking', 'Tentukan tanggal, durasi, dan jumlah peserta. Estimasi biaya muncul otomatis.'], ['3', 'Konfirmasi via WhatsApp', 'Kirim kode booking ke CS kami dan selesaikan pembayaran.']] as [$n, $t, $d])
-                <div class="rounded-2xl border border-white/10 bg-white/5 p-6">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-full bg-sky-400 font-extrabold text-brand-900">{{ $n }}</span>
-                    <h3 class="mt-4 text-lg font-bold">{{ $t }}</h3>
-                    <p class="mt-1.5 text-sm text-slate-300">{{ $d }}</p>
-                </div>
-            @endforeach
+<section class="container-page mt-20">
+    <div class="flex flex-col items-start justify-between gap-6 rounded-2xl bg-brand-50 p-8 md:flex-row md:items-center md:p-12">
+        <div>
+            <h2 class="text-2xl font-semibold tracking-tight md:text-3xl">Punya ruangan yang jarang terpakai?</h2>
+            <p class="mt-2 max-w-xl text-zinc-700">Pasang di SpaceRent, atur jam buka dan kebijakan batal sendiri, lalu terima pesanan dari penyewa terverifikasi.</p>
         </div>
+        <a href="{{ route('register', ['role' => 'seller']) }}" class="btn btn-dark btn-lg shrink-0">Jadi mitra</a>
     </div>
 </section>
 @endsection

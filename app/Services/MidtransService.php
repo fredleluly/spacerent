@@ -46,12 +46,7 @@ class MidtransService
                 'email' => $booking->email,
                 'phone' => $booking->phone,
             ],
-            'item_details' => [[
-                'id' => 'space-'.$booking->space_id,
-                'price' => $total,
-                'quantity' => 1,
-                'name' => mb_substr($space?->name ?? 'Sewa Ruangan', 0, 50),
-            ]],
+            'item_details' => $this->itemDetails($booking, $space?->name ?? 'Sewa Ruangan'),
             'expiry' => ['unit' => 'minute', 'duration' => $minutes],
         ];
 
@@ -60,6 +55,45 @@ class MidtransService
         $booking->forceFill(['order_id' => $orderId, 'snap_token' => $token])->save();
 
         return $token;
+    }
+
+    /** Rincian item; jumlahnya harus sama dengan gross_amount. Data lama tanpa rincian jadi satu item. */
+    private function itemDetails(Booking $booking, string $name): array
+    {
+        $total = (int) $booking->total;
+        $sub = (int) $booking->subtotal;
+        $clean = (int) $booking->cleaning_fee;
+        $service = (int) $booking->service_fee;
+
+        if ($sub <= 0 || $sub + $clean + $service !== $total) {
+            return [['id' => 'space-'.$booking->space_id, 'price' => $total, 'quantity' => 1, 'name' => mb_substr($name, 0, 50)]];
+        }
+
+        $items = [['id' => 'space-'.$booking->space_id, 'price' => $sub, 'quantity' => 1, 'name' => mb_substr('Sewa '.$name, 0, 50)]];
+        if ($clean > 0) {
+            $items[] = ['id' => 'cleaning', 'price' => $clean, 'quantity' => 1, 'name' => 'Biaya kebersihan'];
+        }
+        if ($service > 0) {
+            $items[] = ['id' => 'service', 'price' => $service, 'quantity' => 1, 'name' => 'Biaya layanan'];
+        }
+
+        return $items;
+    }
+
+    /** Batalkan transaksi terbuka di gateway (best effort, dipanggil saat booking dibatalkan). */
+    public function cancelTransaction(string $orderId): void
+    {
+        \Midtrans\Transaction::cancel($orderId);
+    }
+
+    /** Refund via API Midtrans (sandbox/produksi). Melempar exception bila gateway menolak. */
+    public function refund(Booking $booking): void
+    {
+        \Midtrans\Transaction::refund($booking->order_id, [
+            'refund_key' => $booking->code.'-refund',
+            'amount' => (int) $booking->refund_amount,
+            'reason' => 'Pembatalan booking '.$booking->code,
+        ]);
     }
 
     public function verifySignature(array $payload): bool
@@ -95,43 +129,25 @@ class MidtransService
      */
     public function applyNotification(Booking $booking, array $payload): bool
     {
-        $becamePaid = false;
+        $map = $this->mapStatus($payload['transaction_status'] ?? null, $payload['fraud_status'] ?? null, $payload['payment_type'] ?? null);
+        $bookings = app(BookingService::class);
 
-        DB::transaction(function () use ($booking, $payload, &$becamePaid) {
-            $locked = Booking::whereKey($booking->getKey())->lockForUpdate()->first();
-            $map = $this->mapStatus($payload['transaction_status'] ?? null, $payload['fraud_status'] ?? null, $payload['payment_type'] ?? null);
+        // Simpan jejak notifikasi terakhir (audit) tanpa mengubah status.
+        $booking->forceFill(array_filter([
+            'midtrans_payload' => $payload,
+            'payment_type' => $payload['payment_type'] ?? null,
+        ]))->save();
 
-            $update = ['midtrans_payload' => $payload];
-            if (! empty($payload['payment_type'])) {
-                $update['payment_type'] = $payload['payment_type'];
-            }
+        if ($map['payment_status'] === 'paid') {
+            $paidAt = ! empty($payload['settlement_time']) ? Carbon::parse($payload['settlement_time'], 'Asia/Jakarta') : now();
 
-            if ($locked->payment_status === 'paid' || $locked->payment_status === 'refunded') {
-                // jangan pernah menurunkan status paid
-            } elseif ($map['payment_status'] === 'paid') {
-                $update += [
-                    'payment_status' => 'paid',
-                    'status' => 'confirmed',
-                    'paid_at' => ! empty($payload['settlement_time']) ? Carbon::parse($payload['settlement_time'], 'Asia/Jakarta') : now(),
-                ];
-                $becamePaid = true;
-            } elseif (in_array($map['payment_status'], ['failed', 'expired'], true)) {
-                $update += ['payment_status' => $map['payment_status'], 'status' => 'cancelled'];
-            }
-
-            $locked->forceFill($update)->save();
-        });
-
-        $booking->refresh();
-
-        if ($becamePaid) {
-            try {
-                Mail::to($booking->email)->send(new BookingPaid($booking));
-            } catch (\Throwable $e) {
-                Log::warning('BookingPaid mail failed: '.$e->getMessage());
-            }
+            return $bookings->settlePayment($booking, $paidAt, $payload['payment_type'] ?? null) === 'confirmed';
         }
 
-        return $becamePaid;
+        if (in_array($map['payment_status'], ['failed', 'expired'], true)) {
+            $bookings->failPayment($booking, $map['payment_status']);
+        }
+
+        return false;
     }
 }

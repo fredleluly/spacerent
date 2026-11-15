@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Space;
+use App\Support\JakartaGeo;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -88,9 +89,14 @@ class SpaceSeeder extends Seeder
         ];
 
         foreach ($spaces as $data) {
+            $slug = Str::slug($data['name']);
+            [$lat, $lng] = JakartaGeo::coordinates($data['district'], $data['area'], $slug);
             Space::updateOrCreate(
-                ['slug' => Str::slug($data['name'])],
-                $data + ['slug' => Str::slug($data['name']), 'is_available' => true],
+                ['slug' => $slug],
+                $data + [
+                    'slug' => $slug, 'is_available' => true,
+                    'latitude' => $lat, 'longitude' => $lng, 'address_line' => JakartaGeo::address($data['district'], $data['area']),
+                ],
             );
         }
     }

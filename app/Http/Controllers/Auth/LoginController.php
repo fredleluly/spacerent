@@ -28,11 +28,30 @@ class LoginController extends Controller
         $request->session()->regenerate();
         $user = Auth::user();
 
-        if ($redirect = $this->safeRedirect($request->input('redirect'))) {
+        if (($redirect = $this->safeRedirect($request->input('redirect'))) && $this->allowedFor($user, $redirect)) {
             return redirect()->to($redirect);
         }
 
-        return redirect()->intended($user->homeRoute());
+        // Tujuan "intended" bisa sisa dari kunjungan lama (mis. /admin saat belum login). Pakai hanya bila sesuai peran.
+        $intended = $request->session()->pull('url.intended');
+        if ($intended && $this->allowedFor($user, $intended)) {
+            return redirect()->to($intended);
+        }
+
+        return redirect()->to($user->homeRoute());
+    }
+
+    /** Area panel hanya untuk perannya; halaman publik boleh untuk siapa saja. */
+    private function allowedFor($user, string $url): bool
+    {
+        $path = '/'.ltrim((string) parse_url($url, PHP_URL_PATH), '/');
+
+        return match (true) {
+            str_starts_with($path, '/admin') => $user->isAdmin(),
+            str_starts_with($path, '/penjual') => $user->isSeller(),
+            str_starts_with($path, '/akun') => $user->isBuyer(),
+            default => true,
+        };
     }
 
     public function destroy(Request $request)

@@ -54,12 +54,13 @@ class AdminBookingPaymentTest extends TestCase
         $this->actingAs($admin)->post(route('admin.bookings.cancel', $b))->assertSessionHas('success');
         $this->assertSame('cancelled', $b->fresh()->status);
 
-        $this->actingAs($admin)->get(route('admin.bookings.show', $b))->assertSee('Perlu refund')->assertSee('Rp 200.000');
+        $this->assertSame('refund_pending', $b->fresh()->payment_status);
+        $this->actingAs($admin)->get(route('admin.bookings.show', $b))->assertSee('Menunggu refund')->assertSee('Rp 200.000');
 
         $this->post(route('admin.bookings.refund', $b))->assertSessionHas('success');
         $this->assertSame('refunded', $b->fresh()->payment_status);
 
-        $c = $this->booking(['status' => 'confirmed', 'payment_status' => 'paid']);
+        $c = $this->booking(['status' => 'confirmed', 'payment_status' => 'paid', 'starts_at' => now()->subHours(3), 'end_at' => now()->addHour()]);
         $this->post(route('admin.bookings.complete', $c));
         $this->assertSame('completed', $c->fresh()->status);
     }

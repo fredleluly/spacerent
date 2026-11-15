@@ -3,61 +3,66 @@
 @section('title', 'Daftar - SpaceRent')
 
 @section('content')
-@php
-    $role = old('role', $role ?? 'buyer');
-    $input = 'mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm normal-case text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20';
-    $label = 'block text-[11px] font-bold uppercase tracking-wide text-slate-500';
-@endphp
-<div class="bg-slate-50 py-14">
-    <div class="mx-auto max-w-md px-4">
-        <div class="rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
-            <h1 class="text-2xl font-extrabold">Buat Akun SpaceRent</h1>
-            <p class="mt-1 text-sm text-slate-500">Gratis dan hanya butuh satu menit.</p>
+@php $role = old('role', $role ?? 'buyer'); @endphp
+<div class="container-page grid items-start gap-12 py-12 lg:grid-cols-2">
+    <div class="mx-auto w-full max-w-md">
+        <h1 class="text-3xl font-semibold tracking-tight">Buat akun SpaceRent</h1>
+        <p class="mt-2 text-zinc-600">Gratis, selesai dalam satu menit.</p>
 
-            <form method="POST" action="{{ route('register') }}" class="mt-6 space-y-4">
-                @csrf
-                @if ($errors->any())
-                    <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
-                        <ul class="list-inside list-disc">@foreach ($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
-                    </div>
-                @endif
+        @if ($errors->any())
+            <div class="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900" role="alert">
+                <p class="font-semibold">Periksa kembali isian Anda</p>
+                <ul class="mt-1 list-inside list-disc">@foreach ($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
+            </div>
+        @endif
 
-                <fieldset>
-                    <legend class="{{ $label }}">Daftar sebagai</legend>
-                    <div class="mt-1 grid grid-cols-2 gap-3">
-                        <label class="cursor-pointer rounded-xl border-2 border-slate-200 p-3 text-sm has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50">
-                            <input type="radio" name="role" value="buyer" class="sr-only" @checked($role === 'buyer')>
-                            <span class="block font-extrabold">Pembeli</span>
-                            <span class="block text-xs text-slate-500">Ingin menyewa ruangan</span>
-                        </label>
-                        <label class="cursor-pointer rounded-xl border-2 border-slate-200 p-3 text-sm has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50">
-                            <input type="radio" name="role" value="seller" class="sr-only" @checked($role === 'seller')>
-                            <span class="block font-extrabold">Penjual</span>
-                            <span class="block text-xs text-slate-500">Pemilik ruangan</span>
-                        </label>
-                    </div>
-                </fieldset>
+        <form method="POST" action="{{ route('register') }}" class="mt-8 space-y-5" data-once>
+            @csrf
+            <fieldset>
+                <legend class="label">Saya ingin</legend>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="cursor-pointer rounded-xl border border-zinc-300 p-4 transition has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-50 has-[:checked]:ring-1 has-[:checked]:ring-zinc-900">
+                        <input type="radio" name="role" value="buyer" class="sr-only" @checked($role === 'buyer')>
+                        <span class="block font-semibold">Menyewa ruangan</span>
+                        <span class="mt-0.5 block text-xs text-zinc-600">Akun pembeli</span>
+                    </label>
+                    <label class="cursor-pointer rounded-xl border border-zinc-300 p-4 transition has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-50 has-[:checked]:ring-1 has-[:checked]:ring-zinc-900">
+                        <input type="radio" name="role" value="seller" class="sr-only" @checked($role === 'seller')>
+                        <span class="block font-semibold">Menyewakan ruangan</span>
+                        <span class="mt-0.5 block text-xs text-zinc-600">Akun penjual</span>
+                    </label>
+                </div>
+            </fieldset>
+            <div>
+                <label for="name" class="label">Nama lengkap</label>
+                <input id="name" type="text" name="name" value="{{ old('name') }}" required autocomplete="name" class="input">
+            </div>
+            <div>
+                <label for="email" class="label">Email</label>
+                <input id="email" type="email" name="email" value="{{ old('email') }}" required autocomplete="email" class="input">
+            </div>
+            <div>
+                <label for="phone" class="label">Nomor WhatsApp</label>
+                <input id="phone" type="tel" name="phone" value="{{ old('phone') }}" required autocomplete="tel" placeholder="0812 3456 7890" class="input">
+            </div>
+            <div class="grid gap-5 sm:grid-cols-2">
+                <div>
+                    <label for="password" class="label">Kata sandi</label>
+                    <input id="password" type="password" name="password" required minlength="8" autocomplete="new-password" class="input">
+                    <p class="help">Minimal 8 karakter.</p>
+                </div>
+                <div>
+                    <label for="password_confirmation" class="label">Ulangi kata sandi</label>
+                    <input id="password_confirmation" type="password" name="password_confirmation" required minlength="8" autocomplete="new-password" class="input">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg w-full" data-loading="Memproses...">Buat akun</button>
+        </form>
 
-                <label class="{{ $label }}">Nama Lengkap
-                    <input type="text" name="name" value="{{ old('name') }}" required class="{{ $input }}">
-                </label>
-                <label class="{{ $label }}">Email
-                    <input type="email" name="email" value="{{ old('email') }}" required class="{{ $input }}">
-                </label>
-                <label class="{{ $label }}">No. Telepon / WhatsApp
-                    <input type="tel" name="phone" value="{{ old('phone') }}" required placeholder="0812..." class="{{ $input }}">
-                </label>
-                <label class="{{ $label }}">Password (min. 8 karakter)
-                    <input type="password" name="password" required minlength="8" class="{{ $input }}">
-                </label>
-                <label class="{{ $label }}">Konfirmasi Password
-                    <input type="password" name="password_confirmation" required minlength="8" class="{{ $input }}">
-                </label>
-                <button class="w-full rounded-lg bg-brand-600 py-3 text-sm font-bold text-white hover:bg-brand-700">Daftar</button>
-            </form>
-
-            <p class="mt-5 text-center text-sm text-slate-500">Sudah punya akun? <a href="{{ route('login') }}" class="font-bold text-brand-600 hover:underline">Masuk</a></p>
-        </div>
+        <p class="mt-6 text-sm text-zinc-600">Sudah punya akun? <a href="{{ route('login') }}" class="font-semibold text-brand-700 underline underline-offset-4">Masuk</a></p>
+    </div>
+    <div class="sticky top-24 hidden aspect-[4/5] overflow-hidden rounded-2xl bg-zinc-100 lg:block">
+        <img src="https://images.unsplash.com/photo-1590650153855-d9e808231d41?auto=format&fit=crop&w=1200&q=80" alt="" class="h-full w-full object-cover">
     </div>
 </div>
 @endsection

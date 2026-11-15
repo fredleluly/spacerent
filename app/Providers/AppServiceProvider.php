@@ -19,6 +19,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Nama hari dan bulan dalam bahasa Indonesia (translatedFormat).
+        \Carbon\Carbon::setLocale('id');
+        \Illuminate\Support\Carbon::setLocale('id');
     }
 }

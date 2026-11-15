@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('bookings:expire')->everyMinute();
 Schedule::command('bookings:complete')->hourly();
+Schedule::command('bookings:remind')->hourly();

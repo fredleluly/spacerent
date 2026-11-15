@@ -2,28 +2,15 @@
 
 namespace App\Http\Controllers\Seller;
 
+use App\Exceptions\BookingException;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Services\BookingService;
 use App\Support\RefundPolicy;
 use Illuminate\Http\Request;
 
 class BookingController extends Controller
 {
-    public const STATUSES = [
-        'pending' => 'Menunggu',
-        'confirmed' => 'Dikonfirmasi',
-        'completed' => 'Selesai',
-        'cancelled' => 'Dibatalkan',
-    ];
-
-    public const PAYMENT_STATUSES = [
-        'unpaid' => 'Belum Dibayar',
-        'paid' => 'Lunas',
-        'failed' => 'Gagal',
-        'expired' => 'Kedaluwarsa',
-        'refunded' => 'Dikembalikan',
-    ];
-
     private function own(Booking $booking): Booking
     {
         abort_unless($booking->space && $booking->space->user_id === auth()->id(), 403);
@@ -45,7 +32,11 @@ class BookingController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        return view('seller.bookings.index', ['bookings' => $bookings, 'statuses' => self::STATUSES, 'paymentStatuses' => self::PAYMENT_STATUSES]);
+        return view('seller.bookings.index', [
+            'bookings' => $bookings,
+            'statuses' => Booking::STATUSES,
+            'paymentStatuses' => Booking::PAYMENT_STATUSES,
+        ]);
     }
 
     public function show(Booking $booking)
@@ -53,38 +44,54 @@ class BookingController extends Controller
         $this->own($booking);
 
         return view('seller.bookings.show', [
-            'booking' => $booking->load('space'),
-            'paymentStatuses' => self::PAYMENT_STATUSES,
-            'refundPercent' => RefundPolicy::percent($booking),
-            'refundAmount' => RefundPolicy::amount($booking),
+            'booking' => $booking->load(['space', 'review.photos']),
+            'paymentStatuses' => Booking::PAYMENT_STATUSES,
+            'refundPercent' => 100,
+            'refundAmount' => RefundPolicy::quote($booking, 'seller')['amount'],
         ]);
     }
 
-    public function cancel(Booking $booking)
+    public function approve(Booking $booking, BookingService $bookings)
     {
-        $this->own($booking);
-
-        if (in_array($booking->status, ['cancelled', 'completed'], true)) {
-            return back()->with('error', 'Booking dengan status ini tidak bisa dibatalkan.');
-        }
-
-        $booking->forceFill(['status' => 'cancelled'])->save();
-
-        return back()->with('success', $booking->payment_status === 'paid'
-            ? 'Booking dibatalkan. Refund diproses oleh admin SpaceRent.'
-            : 'Booking dibatalkan.');
+        return $this->run(fn () => $bookings->approve($this->own($booking)), 'Permintaan disetujui. Pembeli diminta membayar.');
     }
 
-    public function complete(Booking $booking)
+    public function reject(Request $request, Booking $booking, BookingService $bookings)
     {
-        $this->own($booking);
+        $data = $request->validate(['reason' => ['nullable', 'string', 'max:200']]);
 
-        if ($booking->status !== 'confirmed' || $booking->payment_status !== 'paid') {
-            return back()->with('error', 'Hanya booking terkonfirmasi dan lunas yang bisa diselesaikan.');
+        return $this->run(fn () => $bookings->reject($this->own($booking), $data['reason'] ?? null), 'Permintaan ditolak.');
+    }
+
+    public function cancel(Request $request, Booking $booking, BookingService $bookings)
+    {
+        $data = $request->validate(['reason' => ['nullable', 'string', 'max:200']]);
+        $paid = $booking->payment_status === 'paid';
+
+        return $this->run(
+            fn () => $bookings->cancel($this->own($booking), 'seller', $data['reason'] ?? null),
+            $paid ? 'Booking dibatalkan. Pembeli akan menerima refund penuh.' : 'Booking dibatalkan.'
+        );
+    }
+
+    public function complete(Booking $booking, BookingService $bookings)
+    {
+        return $this->run(fn () => $bookings->complete($this->own($booking)), 'Booking ditandai selesai.');
+    }
+
+    public function noShow(Booking $booking, BookingService $bookings)
+    {
+        return $this->run(fn () => $bookings->markNoShow($this->own($booking)), 'Booking ditandai tidak hadir.');
+    }
+
+    private function run(\Closure $action, string $success)
+    {
+        try {
+            $action();
+        } catch (BookingException $e) {
+            return back()->with('error', $e->getMessage());
         }
 
-        $booking->forceFill(['status' => 'completed'])->save();
-
-        return back()->with('success', 'Booking ditandai selesai.');
+        return back()->with('success', $success);
     }
 }

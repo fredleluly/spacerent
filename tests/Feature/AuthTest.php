@@ -88,7 +88,17 @@ class AuthTest extends TestCase
     {
         $s = $this->space();
         $this->post(route('booking.store', $s), [])->assertRedirect(route('login'));
-        $this->get(route('spaces.show', $s))->assertSee('Masuk atau daftar untuk memesan');
+        $this->get(route('spaces.show', $s))->assertSee('Masuk untuk memesan');
+    }
+
+    public function test_login_ignores_stale_intended_url_of_another_role(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller', 'password' => 'secret123']);
+
+        // Tamu membuka /admin lebih dulu (Laravel mengingatnya sebagai tujuan setelah login).
+        $this->get('/admin/dashboard')->assertRedirect();
+        $this->post('/masuk', ['email' => $seller->email, 'password' => 'secret123'])
+            ->assertRedirect(route('seller.dashboard'));
     }
 
     public function test_seller_cannot_book_and_sees_note(): void

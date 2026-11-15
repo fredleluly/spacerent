@@ -1,0 +1,36 @@
+/* Peta SpaceRent (Leaflet + OpenStreetMap). Hanya gaya khusus Leaflet; tata letak memakai Tailwind di Blade. */
+.sr-map { z-index: 0; background: #e8ecef; font-family: inherit; }
+.sr-map .leaflet-popup-content-wrapper { border-radius: 16px; padding: 0; overflow: hidden; box-shadow: 0 18px 40px -14px rgb(24 24 27 / .45); }
+.sr-map .leaflet-popup-content { margin: 0; width: 230px !important; font-size: 13px; line-height: 1.4; }
+.sr-map .leaflet-popup-close-button { color: #fff !important; text-shadow: 0 1px 4px rgb(0 0 0 / .6); font-size: 20px; padding: 6px 8px 0 0; }
+.sr-map .leaflet-control-attribution { font-size: 10px; }
+
+.sr-pop img { display: block; width: 100%; height: 110px; object-fit: cover; background: #e4e4e7; }
+.sr-pop__b { padding: 10px 12px 12px; }
+.sr-pop__n { display: block; font-weight: 650; color: #18181b; text-decoration: none; }
+.sr-pop__n:hover { color: #a21f3e; text-decoration: underline; }
+.sr-pop__m { margin: 2px 0 0; color: #52525b; font-size: 12px; }
+.sr-pop__p { margin: 6px 0 0; font-weight: 650; }
+.sr-pop__p small { font-weight: 500; color: #52525b; }
+.sr-pop__go { display: inline-block; margin-top: 8px; padding: 6px 12px; border-radius: 10px; background: #c42a4c; color: #fff !important; font-weight: 600; text-decoration: none; }
+.sr-pop__go:hover { background: #a21f3e; }
+
+/* Penanda harga */
+.sr-pin { position: relative; display: inline-block; transform: translate(-50%, -100%); padding: 4px 9px; border-radius: 999px; border: 2px solid #fff; background: #c42a4c; color: #fff; font: 650 12px/1.2 'Geist Variable', ui-sans-serif, system-ui, sans-serif; white-space: nowrap; box-shadow: 0 6px 14px -4px rgb(24 24 27 / .5); transition: transform .15s, background .15s; }
+.sr-pin::after { content: ''; position: absolute; left: 50%; bottom: -6px; width: 9px; height: 9px; background: inherit; border-right: 2px solid #fff; border-bottom: 2px solid #fff; transform: translateX(-50%) rotate(45deg); }
+.sr-pin:hover, .sr-pin.is-active { background: #18181b; z-index: 999 !important; }
+.leaflet-marker-icon.sr-pin-wrap { background: none; border: 0; }
+
+/* Penanda pemilih lokasi (penjual) */
+.sr-drop { position: relative; width: 28px; height: 28px; transform: translate(-50%, -100%); }
+.sr-drop::before { content: ''; position: absolute; inset: 0; border-radius: 50% 50% 50% 0; background: #c42a4c; transform: rotate(-45deg); border: 3px solid #fff; box-shadow: 0 8px 16px -4px rgb(24 24 27 / .55); }
+.sr-drop::after { content: ''; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: #fff; }
+
+/* Posisi pengguna */
+.sr-you { width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: #2563eb; border: 3px solid #fff; box-shadow: 0 0 0 0 rgb(37 99 235 / .5); animation: sr-you 2s ease-out infinite; }
+@keyframes sr-you { 0% { box-shadow: 0 0 0 0 rgb(37 99 235 / .5); } 100% { box-shadow: 0 0 0 20px rgb(37 99 235 / 0); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .sr-you { animation: none; }
+    .sr-pin { transition: none; }
+}
